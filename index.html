@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Broker Hub</title>
+    <style>
+        :root {
+            --bg-color: #0b0e11;
+            --card-bg: #181a20;
+            --text-main: #eaecef;
+            --text-muted: #848e9c;
+            --primary: #f0b90b;
+            --success: #0ecb81;
+            --danger: #f6465d;
+            --border: #2b3139;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 15px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        h1, h2 { margin: 0; color: var(--text-main); }
+        h1 { font-size: 1.4rem; font-weight: 600; }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            background-color: var(--danger);
+            color: white;
+        }
+        .status-badge.connected { background-color: var(--success); }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        @media (min-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .ticker-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .ticker-box {
+            flex: 1;
+            background: var(--bg-color);
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .price-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-family: monospace;
+            margin-top: 5px;
+            color: var(--success);
+        }
+        .price-display.down { color: var(--danger); }
+        .balance-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .balance-row:last-child { border-bottom: none; }
+        .balance-val { font-family: monospace; font-weight: bold; }
+        .trade-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        label { font-size: 0.85rem; color: var(--text-muted); }
+        input, select {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: monospace;
+        }
+        .btn {
+            background-color: var(--primary);
+            color: #000;
+            border: none;
+            padding: 14px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .log-box {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            height: 140px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.8rem;
+            padding: 10px;
+            margin-top: 15px;
+            color: #00ffcc;
+        }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px dashed #222; padding-bottom: 4px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: monospace;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        th { color: var(--text-muted); }
+        .txt-buy { color: var(--success); }
+        .txt-sell { color: var(--danger); }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>Termux Multi-Asset Broker</h1>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Core Ledger: user:1001</span>
+        </div>
+        <span id="conn-status" class="status-badge">DISCONNECTED</span>
+    </header>
+
+    <div class="dashboard-grid">
+        <div class="card">
+            <h2>📈 Live Market Ticker Streams</h2>
+            <div class="ticker-container">
+                <div class="ticker-box">
+                    <label>BTC-USD</label>
+                    <div id="price-BTC" class="price-display">$65,000.00</div>
+                </div>
+                <div class="ticker-box">
+                    <label>ETH-USD</label>
+                    <div id="price-ETH" class="price-display">$3,500.00</div>
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top:12px;" id="tick-time">Awaiting data loop streaming...</div>
+        </div>
+
+        <div class="card">
+            <h2>💼 Portfolio Balance Sheet</h2>
+            <div>
+                <div class="balance-row">
+                    <span class="text-muted">Fiat Capital (USD)</span>
+                    <span id="bal-usd" class="balance-val">$150,000.00</span>
+                </div>
+                <div class="balance-row">
+                    <span class="text-muted">Bitcoin Holdings (BTC)</span>
+                    <span id="bal-btc" class="balance-val">0.0000 BTC</span>
+                </div>
+                <div class="balance-row">
+                    <span class="text-muted">Ethereum Holdings (ETH)</span>
+                    <span id="bal-eth" class="balance-val">0.0000 ETH</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🚀 Dispatch Trade Slip</h2>
+            <div class="trade-form">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="input-group">
+                        <label>Action</label>
+                        <select id="order-action">
+                            <option value="BUY">BUY MARKET</option>
+                            <option value="SELL">SELL MARKET</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Asset</label>
+                        <select id="order-asset">
+                            <option value="BTC">Bitcoin (BTC)</option>
+                            <option value="ETH">Ethereum (ETH)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Order Amount (Qty)</label>
+                    <input type="number" id="order-amount" step="0.01" min="0.01" value="0.50">
+                </div>
+                <button class="btn" onclick="submitMarketOrder()">Execute Order Trade</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🗒️ Live System Activity</h2>
+            <div id="logs" class="log-box"></div>
+        </div>
+
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2>🗄️ Permanent Ledger Audit Logs (Database Pull)</h2>
+            <div style="max-height: 200px; overflow-y: auto; margin-top: 10px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Time</th>
+                            <th>Action</th>
+                            <th>Asset</th>
+                            <th>Execution Price</th>
+                            <th>Amount</th>
+                            <th>Total Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body">
+                        <tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No records found in database query.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script>
+        let ws;
+        let lastPrices = { 'BTC': 65000.00, 'ETH': 3500.00 };
+        function connectToBroker() {
+            ws = new WebSocket('ws://localhost:8080');
+            ws.onopen = () => {
+                const status = document.getElementById('conn-status');
+                status.innerText = "CONNECTED ENGINE";
+                status.classList.add('connected');
+                logAction("System Connection established successfully.");
+                ws.send(JSON.stringify({ type: 'GET_HISTORY' }));
+            };
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'TICKER') {
+                    const asset = data.topic.split('-')[0];
+                    const priceEl = document.getElementById(`price-${asset}`);
+                    const timeEl = document.getElementById('tick-time');
+                    if (!priceEl) return;
+                    if (data.price > lastPrices[asset]) { priceEl.className = "price-display"; } 
+                    else if (data.price < lastPrices[asset]) { priceEl.className = "price-display down"; }
+                    priceEl.innerText = `$${data.price.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                    timeEl.innerText = `Last network matrix tick captured at: ${data.timestamp}`;
+                    lastPrices[asset] = data.price;
+                } 
+                else if (data.type === 'HISTORY_RECORDS') { renderHistoryTable(data.records); }
+                else {
+                    logAction(`Broker Response: ${data.status} ${data.reason ? '- ' + data.reason : ''}`);
+                    if (data.status === 'FILLED' && data.portfolioSnapshot) {
+                        document.getElementById('bal-usd').innerText = `$${parseFloat(data.portfolioSnapshot.USD).toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                        document.getElementById('bal-btc').innerText = `${parseFloat(data.portfolioSnapshot.BTC).toFixed(4)} BTC`;
+                        document.getElementById('bal-eth').innerText = `${parseFloat(data.portfolioSnapshot.ETH).toFixed(4)} ETH`;
+                        logAction(`🎯 ${data.action} Filled! ${data.amountFilled} ${data.asset} @ $${data.executionPrice}`);
+                        ws.send(JSON.stringify({ type: 'GET_HISTORY' }));
+                    }
+                }
+            };
+            ws.onclose = () => {
+                const status = document.getElementById('conn-status');
+                status.innerText = "DISCONNECTED";
+                status.classList.remove('connected');
+                logAction("⚠️ Pipeline disconnected. Retrying stream hook in 3s...");
+                setTimeout(connectToBroker, 3000);
+            };
+        }
+        function submitMarketOrder() {
+            const action = document.getElementById('order-action').value;
+            const asset = document.getElementById('order-asset').value;
+            const qty = document.getElementById('order-amount').value;
+            if (!qty || qty <= 0) return alert("Specify valid values.");
+            const payload = { type: 'ORDER', action: action, asset: asset, amount: parseFloat(qty) };
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(payload));
+                logAction(`Dispatching ${action} slip for ${qty} ${asset}...`);
+            } else { alert("Broker pipeline engine offline."); }
+        }
+        function renderHistoryTable(records) {
+            const tbody = document.getElementById('history-table-body');
+            if (!records || records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No records found in database query.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = records.map(r => `
+                <tr>
+                    <td>${r.orderId}</td>
+                    <td>${r.timestamp}</td>
+                    <td class="${r.action === 'BUY' ? 'txt-buy' : 'txt-sell'}">${r.action}</td>
+                    <td>${r.asset}</td>
+                    <td>$${parseFloat(r.executionPrice).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                    <td>${r.amountFilled}</td>
+                    <td>$${parseFloat(r.totalValue).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                </tr>
+            `).join('');
+        }
+        function logAction(msg) {
+            const container = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = "log-entry";
+            entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+        connectToBroker();
+    </script>
+</body>
+</html>
+
