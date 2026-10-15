@@ -59,11 +59,8 @@
             display: flex;
             justify-content: space-between;
             gap: 15px;
-            margin-top: 15px;
         }
         .ticker-box {
-            flex: 1;
-            background: var(--bg-color);
             padding: 12px;
             border-radius: 6px;
             border: 1px solid var(--border);
@@ -150,29 +147,29 @@
     <header>
         <div>
             <h1>Termux Multi-Asset Broker</h1>
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Core Ledger: user:1001</span>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Core Ledger: user1001</span>
         </div>
         <span id="conn-status" class="status-badge">DISCONNECTED</span>
     </header>
 
     <div class="dashboard-grid">
         <div class="card">
-            <h2>📈 Live Market Ticker Streams</h2>
+            <h2>Live Market Ticker Streams</h2>
             <div class="ticker-container">
                 <div class="ticker-box">
                     <label>BTC-USD</label>
-                    <div id="price-BTC" class="price-display">$65,000.00</div>
+                    <div id="price-btc" class="price-display">$65,000.00</div>
                 </div>
                 <div class="ticker-box">
                     <label>ETH-USD</label>
-                    <div id="price-ETH" class="price-display">$3,500.00</div>
+                    <div id="price-eth" class="price-display">$3,500.00</div>
                 </div>
             </div>
             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top:12px;" id="tick-time">Awaiting data loop streaming...</div>
         </div>
 
         <div class="card">
-            <h2>💼 Portfolio Balance Sheet</h2>
+            <h2>Portfolio Balance Sheet</h2>
             <div>
                 <div class="balance-row">
                     <span class="text-muted">Fiat Capital (USD)</span>
@@ -190,23 +187,21 @@
         </div>
 
         <div class="card">
-            <h2>🚀 Dispatch Trade Slip</h2>
+            <h2>Dispatch Trade Slip</h2>
             <div class="trade-form">
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="input-group">
-                        <label>Action</label>
-                        <select id="order-action">
-                            <option value="BUY">BUY MARKET</option>
-                            <option value="SELL">SELL MARKET</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label>Asset</label>
-                        <select id="order-asset">
-                            <option value="BTC">Bitcoin (BTC)</option>
-                            <option value="ETH">Ethereum (ETH)</option>
-                        </select>
-                    </div>
+                <div class="input-group">
+                    <label>Action</label>
+                    <select id="order-action">
+                        <option value="BUY">BUY MARKET</option>
+                        <option value="SELL">SELL MARKET</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Asset</label>
+                    <select id="order-asset">
+                        <option value="BTC">Bitcoin (BTC)</option>
+                        <option value="ETH">Ethereum (ETH)</option>
+                    </select>
                 </div>
                 <div class="input-group">
                     <label>Order Amount (Qty)</label>
@@ -217,12 +212,12 @@
         </div>
 
         <div class="card">
-            <h2>🗒️ Live System Activity</h2>
+            <h2>Live System Activity</h2>
             <div id="logs" class="log-box"></div>
         </div>
 
         <div class="card" style="grid-column: 1 / -1;">
-            <h2>🗄️ Permanent Ledger Audit Logs (Database Pull)</h2>
+            <h2>Permanent Ledger Audit Logs (Database Pull)</h2>
             <div style="max-height: 200px; overflow-y: auto; margin-top: 10px;">
                 <table>
                     <thead>
@@ -246,87 +241,107 @@
     <script>
         let ws;
         let lastPrices = { 'BTC': 65000.00, 'ETH': 3500.00 };
+        
         function connectToBroker() {
-            ws = new WebSocket('ws://localhost:8080');
-            ws.onopen = () => {
-                const status = document.getElementById('conn-status');
+            ws = new WebSocket('wss://://onrender.com');
+            
+            ws.onopen = function() {
+                var status = document.getElementById('conn-status');
                 status.innerText = "CONNECTED ENGINE";
                 status.classList.add('connected');
                 logAction("System Connection established successfully.");
                 ws.send(JSON.stringify({ type: 'GET_HISTORY' }));
             };
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
+
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
                 if (data.type === 'TICKER') {
-                    const asset = data.topic.split('-')[0];
-                    const priceEl = document.getElementById(`price-${asset}`);
-                    const timeEl = document.getElementById('tick-time');
+                    var asset = data.topic.split('-')[0];
+                    var priceEl = document.getElementById('price-' + asset.toLowerCase());
+                    var timeEl = document.getElementById('tick-time');
                     if (!priceEl) return;
-                    if (data.price > lastPrices[asset]) { priceEl.className = "price-display"; } 
-                    else if (data.price < lastPrices[asset]) { priceEl.className = "price-display down"; }
-                    priceEl.innerText = `$${data.price.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-                    timeEl.innerText = `Last network matrix tick captured at: ${data.timestamp}`;
+                    
+                    if (data.price > lastPrices[asset]) {
+                        priceEl.className = "price-display";
+                    } else if (data.price < lastPrices[asset]) {
+                        priceEl.className = "price-display down";
+                    }
+                    priceEl.innerText = '$' + data.price.toLocaleString(undefined, {minimumFractionDigits: 2});
+                    timeEl.innerText = 'Last network matrix tick captured at: ' + data.timestamp;
                     lastPrices[asset] = data.price;
                 } 
-                else if (data.type === 'HISTORY_RECORDS') { renderHistoryTable(data.records); }
+                else if (data.type === 'HISTORY_RECORDS') {
+                    renderHistoryTable(data.records);
+                }
                 else {
-                    logAction(`Broker Response: ${data.status} ${data.reason ? '- ' + data.reason : ''}`);
+                    logAction('Broker Response: ' + data.status + (data.reason ? ' - ' + data.reason : ''));
                     if (data.status === 'FILLED' && data.portfolioSnapshot) {
-                        document.getElementById('bal-usd').innerText = `$${parseFloat(data.portfolioSnapshot.USD).toLocaleString(undefined, {minimumFractionDigits:2})}`;
-                        document.getElementById('bal-btc').innerText = `${parseFloat(data.portfolioSnapshot.BTC).toFixed(4)} BTC`;
-                        document.getElementById('bal-eth').innerText = `${parseFloat(data.portfolioSnapshot.ETH).toFixed(4)} ETH`;
-                        logAction(`🎯 ${data.action} Filled! ${data.amountFilled} ${data.asset} @ $${data.executionPrice}`);
+                        document.getElementById('bal-usd').innerText = '$' + parseFloat(data.portfolioSnapshot.USD).toLocaleString(undefined, {minimumFractionDigits:2});
+                        document.getElementById('bal-btc').innerText = parseFloat(data.portfolioSnapshot.BTC).toFixed(4) + ' BTC';
+                        document.getElementById('bal-eth').innerText = parseFloat(data.portfolioSnapshot.ETH).toFixed(4) + ' ETH';
+                        logAction('Order Action Filled! ' + data.amountFilled + ' ' + data.asset + ' @ $' + data.executionPrice);
                         ws.send(JSON.stringify({ type: 'GET_HISTORY' }));
                     }
                 }
             };
-            ws.onclose = () => {
-                const status = document.getElementById('conn-status');
-                status.innerText = "DISCONNECTED";
+
+            ws.onclose = function() {
+                var status = document.getElementById('conn-status');
+                status.innerText = 'DISCONNECTED';
                 status.classList.remove('connected');
-                logAction("⚠️ Pipeline disconnected. Retrying stream hook in 3s...");
+                logAction("Pipeline disconnected. Retrying stream hook in 3s...");
                 setTimeout(connectToBroker, 3000);
             };
         }
+
         function submitMarketOrder() {
-            const action = document.getElementById('order-action').value;
-            const asset = document.getElementById('order-asset').value;
-            const qty = document.getElementById('order-amount').value;
+            var action = document.getElementById('order-action').value;
+            var asset = document.getElementById('order-asset').value;
+            var qty = document.getElementById('order-amount').value;
             if (!qty || qty <= 0) return alert("Specify valid values.");
-            const payload = { type: 'ORDER', action: action, asset: asset, amount: parseFloat(qty) };
+            
+            var payload = { type: 'ORDER', action: action, asset: asset, amount: parseFloat(qty) };
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify(payload));
-                logAction(`Dispatching ${action} slip for ${qty} ${asset}...`);
-            } else { alert("Broker pipeline engine offline."); }
+                logAction('Dispatching ' + action + ' slip for ' + qty + ' ' + asset + '...');
+            } else {
+                alert("Broker pipeline engine offline.");
+            }
         }
+
         function renderHistoryTable(records) {
-            const tbody = document.getElementById('history-table-body');
+            var tbody = document.getElementById('history-table-body');
             if (!records || records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No records found in database query.</td></tr>`;
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No records found in database query.</td></tr>';
                 return;
             }
-            tbody.innerHTML = records.map(r => `
-                <tr>
-                    <td>${r.orderId}</td>
-                    <td>${r.timestamp}</td>
-                    <td class="${r.action === 'BUY' ? 'txt-buy' : 'txt-sell'}">${r.action}</td>
-                    <td>${r.asset}</td>
-                    <td>$${parseFloat(r.executionPrice).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                    <td>${r.amountFilled}</td>
-                    <td>$${parseFloat(r.totalValue).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
-                </tr>
-            `).join('');
+            var rows = '';
+            for (var i = 0; i < records.length; i++) {
+                var r = records[i];
+                var cls = r.action === 'BUY' ? 'txt-buy' : 'txt-sell';
+                rows += '<tr>' +
+                    '<td>' + r.orderId + '</td>' +
+                    '<td>' + r.timestamp + '</td>' +
+                    '<td class="' + cls + '">' + r.action + '</td>' +
+                    '<td>' + r.asset + '</td>' +
+                    '<td>$' + parseFloat(r.executionPrice).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>' +
+                    '<td>' + r.amountFilled + '</td>' +
+                    '<td>$' + parseFloat(r.totalValue).toLocaleString(undefined, {minimumFractionDigits:2}) + '</td>' +
+                '</tr>';
+            }
+            tbody.innerHTML = rows;
         }
+
         function logAction(msg) {
-            const container = document.getElementById('logs');
-            const entry = document.createElement('div');
+            var container = document.getElementById('logs');
+            var entry = document.createElement('div');
             entry.className = "log-entry";
-            entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            entry.innerText = '[' + new Date().toLocaleTimeString() + '] ' + msg;
             container.appendChild(entry);
             container.scrollTop = container.scrollHeight;
         }
+
         connectToBroker();
     </script>
 </body>
 </html>
-
